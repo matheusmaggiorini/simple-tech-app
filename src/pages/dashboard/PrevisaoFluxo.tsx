@@ -112,23 +112,23 @@ const PredictionResults = ({ data }: { data: PredictionData[] }) => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Dados da Previsão</CardTitle>
+          <CardTitle className="text-base">Dados da Previsão</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Data</TableHead>
-                <TableHead>Fluxo Previsto</TableHead>
-                <TableHead>Saldo Previsto</TableHead>
+                <TableHead className="h-8 px-2 text-xs">Data</TableHead>
+                <TableHead className="h-8 px-2 text-xs">Fluxo Previsto</TableHead>
+                <TableHead className="h-8 px-2 text-xs">Saldo Previsto</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {data.map((item) => (
                 <TableRow key={item.data}>
-                  <TableCell>{formatDate(item.data)}</TableCell>
-                  <TableCell>{formatCurrency(item.fluxo_previsto)}</TableCell>
-                  <TableCell>{formatCurrency(item.saldo_previsto)}</TableCell>
+                  <TableCell className="p-2 text-xs">{formatDate(item.data)}</TableCell>
+                  <TableCell className="p-2 text-xs">{formatCurrency(item.fluxo_previsto)}</TableCell>
+                  <TableCell className="p-2 text-xs">{formatCurrency(item.saldo_previsto)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

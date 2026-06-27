@@ -3,6 +3,7 @@ import { BarChart3, Upload, TrendingUp, Activity, LogOut } from "lucide-react";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
+import { LOGO_SIMPLE_URL } from "@/lib/assets";
 const navigationItems = [{
   title: "Upload de Dados",
   url: "/dashboard/upload",
@@ -33,7 +34,7 @@ export function AppSidebar() {
       <div className="p-4 bg-sidebar">
         <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => window.location.href = '/'}>
           <div className="w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden bg-sidebar-accent/20">
-            <img src="/lovable-uploads/cb98570b-3eaf-4009-9198-43d180016a3c.png" alt="Simple Logo" className="w-full h-full object-contain" />
+            <img src={LOGO_SIMPLE_URL} alt="Simple Logo" className="w-full h-full object-contain" />
           </div>
           {!collapsed && <span className="text-xl font-bold text-sidebar-foreground">Simple</span>}
         </div>

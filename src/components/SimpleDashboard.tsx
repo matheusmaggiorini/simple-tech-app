@@ -3,6 +3,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { DashboardContent } from "@/components/DashboardContent";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
+import { LOGO_SIMPLE_URL } from "@/lib/assets";
 export function SimpleDashboard() {
   const handleBackToHome = () => {
     window.location.href = '/';
@@ -18,7 +19,7 @@ export function SimpleDashboard() {
                  onClick={() => window.location.href = '/'}
                >
                  <img 
-                   src="/lovable-uploads/cb98570b-3eaf-4009-9198-43d180016a3c.png" 
+                   src={LOGO_SIMPLE_URL} 
                    alt="Simple Logo" 
                    className="w-full h-full object-contain"
                  />

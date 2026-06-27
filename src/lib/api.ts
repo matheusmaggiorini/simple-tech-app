@@ -171,7 +171,7 @@ class ApiService {
         throw new Error(hint || 'Network error');
       }
       const status = error.response.status;
-      const statusText = error.response.statusText;
+      const statusText = error.response.statusText ?? 'Unknown';
       const data = error.response.data;
       let detail: string | undefined;
       if (typeof data === 'string') {
@@ -186,7 +186,9 @@ class ApiService {
           detail = payload.message;
         }
       }
-      const message = detail || `HTTP ${status}: ${statusText}`;
+      const message =
+        detail ||
+        (status != null ? `HTTP ${status}: ${statusText}` : error.message || 'Request failed');
       const err = new Error(message) as Error & { status?: number };
       err.status = status;
       throw err;

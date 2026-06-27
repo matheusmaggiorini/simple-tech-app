@@ -4,6 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from "recharts";
 import { TrendingUp, TrendingDown, DollarSign, Activity, Calendar } from "lucide-react";
 import { apiService } from "@/lib/api";
+import axios from "axios";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
@@ -56,6 +57,17 @@ export function VisaoGeral() {
   const [reportLoading, setReportLoading] = useState<boolean>(false);
   const { toast } = useToast();
 
+  const isMissingDataError = (error: unknown) => {
+    if (axios.isAxiosError(error) && error.response?.status === 404) return true;
+    const err = error as Error & { status?: number };
+    return err?.status === 404;
+  };
+
+  const getErrorMessage = (error: unknown) => {
+    if (error instanceof Error) return error.message;
+    return "Erro desconhecido";
+  };
+
   useEffect(() => {
     fetchAllData();
   }, [dateRange]);
@@ -76,8 +88,27 @@ export function VisaoGeral() {
       setLoading(true);
       console.log('Iniciando fetchAllData...');
 
-      // 1. Buscar estatísticas globais (valores totais reais - sem paginação)
-      const stats = await apiService.getStatistics();
+      let stats;
+      try {
+        stats = await apiService.getStatistics();
+      } catch (error) {
+        if (isMissingDataError(error)) {
+          console.log('Sem estatísticas ainda — aguardando upload');
+          setGlobalStats({
+            saldoAtual: 0,
+            totalEntradas: 0,
+            totalSaidas: 0,
+            dataAtualizacao: "",
+          });
+          setChartData({ evolucaoSaldo: [], entradasSaidas: [] });
+          setMonthlyData([]);
+          setRecentTransactions([]);
+          setPeriodStats({ totalEntradas: 0, totalSaidas: 0, fluxoLiquido: 0 });
+          return;
+        }
+        throw error;
+      }
+
       console.log('🔍 [DEBUG] Estatísticas COMPLETAS recebidas da API:', stats);
       console.log('🔍 [DEBUG] Valor de total_saidas:', stats.total_saidas);
       console.log('🔍 [DEBUG] Valor de media_saida:', stats.media_saida);
@@ -123,46 +154,55 @@ export function VisaoGeral() {
 
       // 3. Buscar dados do período para KPIs (usando método antigo como fallback)
       console.log('Buscando dados do período para KPIs:', { from: dateRange.from, to: dateRange.to });
-      const periodData = await apiService.viewProcessed({
-        start_date: dateRange.from,
-        end_date: dateRange.to,
-        order: 'asc',
-        limit: 1000 // Limite razoável para KPIs
-      } as any);
+      try {
+        const periodData = await apiService.viewProcessed({
+          start_date: dateRange.from,
+          end_date: dateRange.to,
+          order: 'asc',
+          limit: 1000
+        } as any);
 
-      if (periodData && periodData.length > 0) {
-        // Calcular KPIs do período
-        const totalEntradas = periodData.reduce((sum, item) => {
-          const valor = Number(item.entrada) || 0;
-          return sum + valor;
-        }, 0);
-        
-        const totalSaidas = periodData.reduce((sum, item) => {
-          const valor = Number(item.saida) || 0;
-          return sum + valor;
-        }, 0);
-        
-        setPeriodStats({
-          totalEntradas,
-          totalSaidas,
-          fluxoLiquido: totalEntradas - totalSaidas
-        });
-      } else {
+        if (periodData && periodData.length > 0) {
+          const totalEntradas = periodData.reduce((sum, item) => {
+            const valor = Number(item.entrada) || 0;
+            return sum + valor;
+          }, 0);
+          
+          const totalSaidas = periodData.reduce((sum, item) => {
+            const valor = Number(item.saida) || 0;
+            return sum + valor;
+          }, 0);
+          
+          setPeriodStats({
+            totalEntradas,
+            totalSaidas,
+            fluxoLiquido: totalEntradas - totalSaidas
+          });
+        } else {
+          setPeriodStats({ totalEntradas: 0, totalSaidas: 0, fluxoLiquido: 0 });
+        }
+      } catch (error) {
+        if (!isMissingDataError(error)) throw error;
         setPeriodStats({ totalEntradas: 0, totalSaidas: 0, fluxoLiquido: 0 });
       }
 
       // 3. Buscar transações recentes (últimas 50, sem filtro de data)
-      const recent = await apiService.viewProcessed({
-        order: 'desc',
-        limit: 50
-      });
-      setRecentTransactions(recent || []);
+      try {
+        const recent = await apiService.viewProcessed({
+          order: 'desc',
+          limit: 50
+        });
+        setRecentTransactions(recent || []);
+      } catch (error) {
+        if (!isMissingDataError(error)) throw error;
+        setRecentTransactions([]);
+      }
 
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
       toast({
         title: "Erro ao carregar dados",
-        description: error instanceof Error ? error.message : "Erro desconhecido",
+        description: getErrorMessage(error),
         variant: "destructive",
       });
     } finally {

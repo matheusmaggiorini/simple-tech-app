@@ -163,11 +163,29 @@ class ApiService {
 
   private extractErrorMessage(error: unknown): never {
     if (axios.isAxiosError(error)) {
-      const status = error.response?.status;
-      const statusText = error.response?.statusText;
-      const detail =
-        (error.response?.data as { detail?: string; message?: string })?.detail ||
-        (error.response?.data as { message?: string })?.message;
+      if (!error.response) {
+        const hint =
+          error.code === 'ERR_NETWORK'
+            ? 'Could not reach the API. The server may be waking up (Render free tier ~30s) or CORS may be misconfigured.'
+            : error.message;
+        throw new Error(hint || 'Network error');
+      }
+      const status = error.response.status;
+      const statusText = error.response.statusText;
+      const data = error.response.data;
+      let detail: string | undefined;
+      if (typeof data === 'string') {
+        detail = data;
+      } else if (data && typeof data === 'object') {
+        const payload = data as { detail?: string | Array<{ msg?: string }>; message?: string };
+        if (typeof payload.detail === 'string') {
+          detail = payload.detail;
+        } else if (Array.isArray(payload.detail)) {
+          detail = payload.detail.map((d) => d.msg).filter(Boolean).join(', ');
+        } else {
+          detail = payload.message;
+        }
+      }
       const message = detail || `HTTP ${status}: ${statusText}`;
       const err = new Error(message) as Error & { status?: number };
       err.status = status;

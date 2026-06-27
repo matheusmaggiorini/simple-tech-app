@@ -15,7 +15,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { Activity, TrendingUp, TrendingDown, AlertCircle, Trash2, Plus } from "lucide-react";
 import { ReportRenderer } from "@/components/ReportRenderer";
 import { useToast } from "@/hooks/use-toast";
-import { apiService, BusinessEvent, EventModifier, BusinessEventSimulationRequest, LoanSuggestionsResponse, LoanSimulationRequest } from "@/lib/api";
+import { apiService, API_BASE_URL, BusinessEvent, EventModifier, BusinessEventSimulationRequest, LoanSuggestionsResponse, LoanSimulationRequest } from "@/lib/api";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { formatCurrency } from '@/lib/utils';
 
@@ -1212,9 +1212,9 @@ export function SimulacaoCenarios() {
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                <strong>API Offline:</strong> Não foi possível conectar com o servidor. Verifique se a API está rodando em http://localhost:8000.
+                <strong>API Offline:</strong> Não foi possível conectar com o servidor em {API_BASE_URL}.
                 <br />
-                <strong>Para iniciar a API:</strong> Execute o comando no terminal do backend: <code>python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000</code>
+                <strong>Se estiver em produção:</strong> aguarde ~30s (cold start do Render) e tente novamente.
               </AlertDescription>
             </Alert>
           )}

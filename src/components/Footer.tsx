@@ -1,5 +1,6 @@
 import { Github, Mail, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { LOGO_FOOTER_URL } from "@/lib/assets";
 const Footer = () => {
   return <footer id="contato" className="bg-background border-t border-border">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-16">
@@ -7,7 +8,7 @@ const Footer = () => {
           {/* Logo and Description */}
           <div className="space-y-4">
             <div className="flex items-center space-x-3">
-              <img src="/lovable-uploads/46ca89a7-72fc-479a-bd07-4512df57ce75.png" alt="Simple.Tech Logo" className="h-8 w-auto" />
+              <img src={LOGO_FOOTER_URL} alt="Simple.Tech Logo" className="h-8 w-auto" />
             </div>
             <p className="text-muted-foreground leading-relaxed">
               Facilitando sua gestão através de soluções poderosas de maneira simples.

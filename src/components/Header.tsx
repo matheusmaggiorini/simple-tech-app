@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { LOGO_SIMPLE_URL } from "@/lib/assets";
 
 const Header = () => {
   const navigate = useNavigate();
@@ -22,7 +23,7 @@ const Header = () => {
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center pl-2">
             <img 
-              src="/lovable-uploads/34a7ef60-8f49-4925-bfbb-87137457f2fe.png" 
+              src={LOGO_SIMPLE_URL} 
               alt="Simple Tech Logo" 
               className="h-8 w-auto cursor-pointer"
               onClick={() => scrollToSection('hero')}

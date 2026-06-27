@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { LOGO_SIMPLE_URL } from "@/lib/assets";
 
 const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -86,7 +87,7 @@ const Auth = () => {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <img
-            src="/lovable-uploads/34a7ef60-8f49-4925-bfbb-87137457f2fe.png"
+            src={LOGO_SIMPLE_URL}
             alt="Simple Tech Logo"
             className="h-12 w-auto mx-auto mb-4"
           />

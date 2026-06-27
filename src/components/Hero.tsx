@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, Brain, Eye, Zap } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { LOGO_HERO_URL } from "@/lib/assets";
 
 const Hero = () => {
   const navigate = useNavigate();
@@ -21,7 +22,7 @@ const Hero = () => {
           {/* Logo Section */}
           <div className="mb-8 flex justify-center">
             <img 
-              src="/lovable-uploads/384369b9-e59e-4a5b-b053-e7ff4f9462a8.png" 
+              src={LOGO_HERO_URL} 
               alt="Simple.Tech Logo" 
               className="h-24 w-auto animate-float"
             />

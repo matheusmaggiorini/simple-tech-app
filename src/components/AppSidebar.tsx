@@ -1,7 +1,8 @@
-import { useState } from "react";
-import { useLocation, NavLink } from "react-router-dom";
-import { BarChart3, Upload, TrendingUp, Activity, Menu, Clock } from "lucide-react";
-import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
+import { useLocation, NavLink, useNavigate } from "react-router-dom";
+import { BarChart3, Upload, TrendingUp, Activity, LogOut } from "lucide-react";
+import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
 const navigationItems = [{
   title: "Upload de Dados",
   url: "/dashboard/upload",
@@ -23,6 +24,8 @@ export function AppSidebar() {
   const sidebar = useSidebar();
   const collapsed = sidebar.open === false;
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const currentPath = location.pathname;
   const isActive = (path: string) => currentPath === path;
   return <Sidebar className={`${collapsed ? "w-14" : "w-60"} bg-sidebar transition-all duration-300`}>
@@ -58,5 +61,23 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+
+      {!collapsed && user && (
+        <div className="mt-auto p-4 border-t border-sidebar-accent/20">
+          <p className="text-xs text-sidebar-foreground/70 truncate mb-2">{user.name}</p>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start text-sidebar-foreground hover:text-amber-400"
+            onClick={() => {
+              logout();
+              navigate("/auth");
+            }}
+          >
+            <LogOut className="h-4 w-4 mr-2" />
+            Sign out
+          </Button>
+        </div>
+      )}
     </Sidebar>;
 }

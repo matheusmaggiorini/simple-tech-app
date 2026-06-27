@@ -1,73 +1,45 @@
-# Welcome to your Lovable project
+# Simple Tech — Frontend
 
-## Project info
+React dashboard for the Simple Tech financial management platform.
 
-**URL**: https://lovable.dev/projects/afc05ab7-ffa2-43a2-8111-070be9d2dbd9
+## Setup
 
-## How can I edit this code?
-
-There are several ways of editing your application.
-
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/afc05ab7-ffa2-43a2-8111-070be9d2dbd9) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+```powershell
+npm install
+copy .env.example .env
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+Runs at http://localhost:8080. Requires the [Simple Tech backend](https://github.com/2off2/Simple.Tech) on port 8000.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Scripts
 
-**Use GitHub Codespaces**
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Development server |
+| `npm run build` | Production build |
+| `npm run preview` | Preview production build |
+| `npm run lint` | ESLint |
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Routes
 
-## What technologies are used for this project?
+| Path | Description |
+|------|-------------|
+| `/` | Landing page |
+| `/auth` | Login / sign up |
+| `/dashboard` | Overview (requires data upload) |
+| `/dashboard/upload` | Upload financial files |
+| `/dashboard/previsao` | Cash flow forecast |
+| `/dashboard/simulacao` | Scenario simulation |
 
-This project is built with:
+## Environment
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+```
+VITE_API_BASE_URL=http://localhost:8000
+```
 
-## How can I deploy this project?
+## Tech
 
-Simply open [Lovable](https://lovable.dev/projects/afc05ab7-ffa2-43a2-8111-070be9d2dbd9) and click on Share -> Publish.
+React 18 · TypeScript · Vite · shadcn/ui · TanStack Query · Recharts · Axios
 
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+Part of the Simple Tech team project.

@@ -1,47 +1,30 @@
-// src/lib/api.ts
-
 import axios, { AxiosError, AxiosInstance } from 'axios';
 
 const RAW_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 const API_BASE_URL = `${RAW_BASE_URL}/api`;
+const TOKEN_KEY = 'st_token';
 
-function createAxiosClient(): AxiosInstance {
-  const instance = axios.create({
-    baseURL: API_BASE_URL,
-    withCredentials: false,
-    headers: {
-      // Only default JSON for JSON requests; FormData uploads will override automatically
-      'Accept': 'application/json',
-    },
-  });
-
-  instance.interceptors.response.use(
-    (response) => response,
-    (error: AxiosError) => {
-      const status = error.response?.status;
-      const statusText = error.response?.statusText;
-      const url = error.config?.url;
-      // Log concise error info for easier debugging (CORS, 4xx/5xx)
-      console.error('[API ERROR]', status, statusText, url);
-      return Promise.reject(error);
-    }
-  );
-
-  return instance;
+export interface AuthUser {
+  id: number;
+  email: string;
+  name: string;
 }
 
-const http = createAxiosClient();
+export interface AuthResponse {
+  access_token: string;
+  token_type: string;
+  user: AuthUser;
+}
+
+export interface DataStatus {
+  has_data: boolean;
+  rows: number;
+}
 
 export interface PredictionData {
   data: string;
   fluxo_previsto: number;
   saldo_previsto: number;
-}
-
-export interface OperationalCyclesData {
-  pmr_dias: number;
-  pmp_dias: number;
-  pme_dias: number;
 }
 
 export interface ProcessedData {
@@ -61,8 +44,8 @@ export interface StatisticsData {
   ultimo_saldo: number;
   total_entradas: number;
   total_saidas: number;
-  media_saida?: number;  // Valor médio de saídas
-  media_entrada?: number; // Valor médio de entradas
+  media_saida?: number;
+  media_entrada?: number;
   data_atualizacao?: string;
 }
 
@@ -105,7 +88,7 @@ export interface EventModifier {
 }
 
 export interface BusinessEventSimulationRequest {
-  simulation_type: "event";
+  simulation_type: 'event';
   inflow_modifiers: EventModifier[];
   outflow_modifiers: EventModifier[];
 }
@@ -124,7 +107,7 @@ export interface LoanSuggestionsResponse {
 }
 
 export interface LoanSimulationRequest {
-  simulation_type: "loan_impact";
+  simulation_type: 'loan_impact';
   loan_params: {
     amount: number;
     interest_rate_monthly: number;
@@ -132,12 +115,59 @@ export interface LoanSimulationRequest {
   };
 }
 
+let authToken: string | null = localStorage.getItem(TOKEN_KEY);
+
+function createAxiosClient(): AxiosInstance {
+  const instance = axios.create({
+    baseURL: API_BASE_URL,
+    withCredentials: false,
+    headers: { Accept: 'application/json' },
+  });
+
+  instance.interceptors.request.use((config) => {
+    if (authToken) {
+      config.headers.Authorization = `Bearer ${authToken}`;
+    }
+    return config;
+  });
+
+  instance.interceptors.response.use(
+    (response) => response,
+    (error: AxiosError) => {
+      if (error.response?.status === 401) {
+        authToken = null;
+        localStorage.removeItem(TOKEN_KEY);
+      }
+      return Promise.reject(error);
+    },
+  );
+
+  return instance;
+}
+
+const http = createAxiosClient();
+
 class ApiService {
+  getToken(): string | null {
+    return authToken;
+  }
+
+  setToken(token: string | null): void {
+    authToken = token;
+    if (token) {
+      localStorage.setItem(TOKEN_KEY, token);
+    } else {
+      localStorage.removeItem(TOKEN_KEY);
+    }
+  }
+
   private extractErrorMessage(error: unknown): never {
     if (axios.isAxiosError(error)) {
       const status = error.response?.status;
       const statusText = error.response?.statusText;
-      const detail = (error.response?.data as any)?.detail || (error.response?.data as any)?.message;
+      const detail =
+        (error.response?.data as { detail?: string; message?: string })?.detail ||
+        (error.response?.data as { message?: string })?.message;
       const message = detail || `HTTP ${status}: ${statusText}`;
       const err = new Error(message) as Error & { status?: number };
       err.status = status;
@@ -146,137 +176,170 @@ class ApiService {
     throw error as Error;
   }
 
-  // Upload do arquivo Excel com ambas as abas
+  async register(name: string, email: string, password: string): Promise<AuthResponse> {
+    try {
+      const { data } = await axios.post<AuthResponse>(`${RAW_BASE_URL}/api/auth/register`, {
+        name,
+        email,
+        password,
+      });
+      return data;
+    } catch (error) {
+      this.extractErrorMessage(error);
+    }
+  }
+
+  async login(email: string, password: string): Promise<AuthResponse> {
+    try {
+      const { data } = await axios.post<AuthResponse>(`${RAW_BASE_URL}/api/auth/login`, {
+        email,
+        password,
+      });
+      return data;
+    } catch (error) {
+      this.extractErrorMessage(error);
+    }
+  }
+
+  async getMe(): Promise<AuthUser> {
+    try {
+      const { data } = await axios.get<AuthUser>(`${RAW_BASE_URL}/api/auth/me`, {
+        headers: authToken ? { Authorization: `Bearer ${authToken}` } : undefined,
+      });
+      return data;
+    } catch (error) {
+      this.extractErrorMessage(error);
+    }
+  }
+
+  async getDataStatus(): Promise<DataStatus> {
+    try {
+      const { data } = await http.get<DataStatus>('/data/status');
+      return data;
+    } catch (error) {
+      this.extractErrorMessage(error);
+    }
+  }
+
   async uploadExcelBundle(file: File): Promise<{ message: string }> {
     const formData = new FormData();
     formData.append('file', file);
     try {
-      const { data } = await http.post<{ message: string }>(`/data/upload_excel_bundle`, formData, {
-        headers: {
-          // Let the browser set the correct multipart boundary; do not force JSON
-          'Content-Type': undefined as any,
-        },
-      });
+      const { data } = await http.post<{ message: string }>(
+        '/data/upload_excel_bundle',
+        formData,
+        { headers: { 'Content-Type': undefined as unknown as string } },
+      );
       return data;
     } catch (error) {
       this.extractErrorMessage(error);
     }
   }
 
-  // Upload de múltiplos arquivos (entradas e/ou saídas)
-  async uploadExcelBundleMulti(files: File[], hasOutflow: boolean = false): Promise<{ message: string }> {
+  async uploadExcelBundleMulti(
+    files: File[],
+    hasOutflow = false,
+  ): Promise<{ message: string }> {
     const formData = new FormData();
-    // O backend aceita tanto 'files' (lista) quanto 'file' único.
     for (const f of files) {
       formData.append('files', f);
     }
-    // Sinalizar para o backend que existem planilhas do card de saída
     formData.append('has_outflow', String(Boolean(hasOutflow)));
     if (files.length === 0) {
-      throw new Error('Nenhum arquivo selecionado.');
+      throw new Error('No files selected.');
     }
     try {
-      const { data } = await http.post<{ message: string }>(`/data/upload_excel_bundle`, formData, {
-        headers: {
-          'Content-Type': undefined as any,
-        },
-      });
+      const { data } = await http.post<{ message: string }>(
+        '/data/upload_excel_bundle',
+        formData,
+        { headers: { 'Content-Type': undefined as unknown as string } },
+      );
       return data;
     } catch (error) {
       this.extractErrorMessage(error);
     }
   }
 
-  // Obter estatísticas globais
   async getStatistics(): Promise<StatisticsData> {
     try {
-      const { data } = await http.get<StatisticsData>(`/data/statistics`);
-      console.log('🔍 [API.TS] Response completa de /data/statistics:', data);
-      console.log('🔍 [API.TS] Todos os campos disponíveis:', Object.keys(data));
-      console.log('🔍 [API.TS] Valores de cada campo:', JSON.stringify(data, null, 2));
+      const { data } = await http.get<StatisticsData>('/data/statistics');
       return data;
     } catch (error) {
       this.extractErrorMessage(error);
     }
   }
 
-  // Visualizar dados processados
-  async viewProcessed(params?: { 
-    limit?: number; 
-    start_date?: string; 
-    end_date?: string; 
-    order?: 'asc' | 'desc' 
+  async viewProcessed(params?: {
+    limit?: number;
+    start_date?: string;
+    end_date?: string;
+    order?: 'asc' | 'desc';
   }): Promise<ProcessedData[]> {
     try {
-      const { data } = await http.get<ProcessedData[]>(`/data/view_processed`, { params });
+      const { data } = await http.get<ProcessedData[]>('/data/view_processed', { params });
       return data;
     } catch (error) {
       this.extractErrorMessage(error);
     }
   }
 
-  // Resumo mensal direto do backend
-  async getMonthlySummary(): Promise<Array<{ ano_mes: string; entrada: number; saida: number; qtd_entradas_pos: number; qtd_saidas_pos: number }>> {
+  async getMonthlySummary(): Promise<
+    Array<{
+      ano_mes: string;
+      entrada: number;
+      saida: number;
+      qtd_entradas_pos: number;
+      qtd_saidas_pos: number;
+    }>
+  > {
     try {
-      const { data } = await http.get(`/data/monthly_summary`);
-      return data as any;
+      const { data } = await http.get('/data/monthly_summary');
+      return data;
     } catch (error) {
       this.extractErrorMessage(error);
     }
   }
 
-  // Evolução do saldo ao longo do tempo (versão filtrada)
   async getBalanceEvolution(): Promise<Array<{ data: string; saldo: number }>> {
     try {
-      const { data } = await http.get(`/data/balance_evolution`);
-      return data as any;
-    } catch (error) {
-      this.extractErrorMessage(error);
-    }
-  }
-
-  // Evolução do saldo simplificada (semanal/mensal)
-  async getBalanceEvolutionSimple(): Promise<Array<{ data: string; saldo: number }>> {
-    try {
-      const { data } = await http.get(`/data/balance_evolution_simple`);
-      return data as any;
-    } catch (error) {
-      this.extractErrorMessage(error);
-    }
-  }
-
-  // Dados mensais agrupados por ano
-  async getYearlyMonthlyData(): Promise<Array<{ 
-    ano: number; 
-    mes: number; 
-    mes_ano: string; 
-    total_entradas: number; 
-    total_saidas: number; 
-    fluxo_liquido: number; 
-    saldo_final_mes: number 
-  }>> {
-    try {
-      const { data } = await http.get(`/data/yearly_monthly_data`);
-      return data as any;
-    } catch (error) {
-      this.extractErrorMessage(error);
-    }
-  }
-
-  // Carregar dados do último bundle processado (fallback)
-  async loadExcelBundle(limit: number = 50): Promise<ProcessedData[]> {
-    try {
-      const { data } = await http.get<ProcessedData[]>(`/data/load_excel_bundle`, { params: { limit } });
+      const { data } = await http.get('/data/balance_evolution');
       return data;
     } catch (error) {
       this.extractErrorMessage(error);
     }
   }
 
-  // Gerar previsão de fluxo de caixa
+  async getBalanceEvolutionSimple(): Promise<Array<{ data: string; saldo: number }>> {
+    try {
+      const { data } = await http.get('/data/balance_evolution_simple');
+      return data;
+    } catch (error) {
+      this.extractErrorMessage(error);
+    }
+  }
+
+  async getYearlyMonthlyData(): Promise<
+    Array<{
+      ano: number;
+      mes: number;
+      mes_ano: string;
+      total_entradas: number;
+      total_saidas: number;
+      fluxo_liquido: number;
+      saldo_final_mes: number;
+    }>
+  > {
+    try {
+      const { data } = await http.get('/data/yearly_monthly_data');
+      return data;
+    } catch (error) {
+      this.extractErrorMessage(error);
+    }
+  }
+
   async predictCashflow(params: { future_days: number }): Promise<PredictionData[]> {
     try {
-      const { data } = await http.post<PredictionData[]>(`/predictions/cashflow`, params, {
+      const { data } = await http.post<PredictionData[]>('/predictions/cashflow', params, {
         headers: { 'Content-Type': 'application/json' },
       });
       return data;
@@ -285,43 +348,37 @@ class ApiService {
     }
   }
 
-  // Obter importância das features do modelo
   async getFeatureImportance(): Promise<Array<{ feature: string; importance: number }>> {
     try {
-      const { data } = await http.get<Array<{ feature: string; importance: number }>>(`/predictions/cashflow/feature_importance`);
+      const { data } = await http.get<Array<{ feature: string; importance: number }>>(
+        '/predictions/cashflow/feature_importance',
+      );
       return data;
     } catch (error) {
       this.extractErrorMessage(error);
     }
   }
 
-  // Obter ciclos operacionais do estado global
-  async getOperationalCycles(): Promise<OperationalCyclesData> {
-    try {
-      const { data } = await http.get<OperationalCyclesData>(`/data/operational_cycles`);
-      return data;
-    } catch (error) {
-      this.extractErrorMessage(error);
-    }
-  }
-
-  // Simulação de cenários
   async scenarioSimulation(
     variacaoEntradas: number,
     variacaoSaidas: number,
-    diasSimulacao: number = 30,
-    numSimulacoes: number = 1000,
-    useAiCorrelation: boolean = false
+    diasSimulacao = 30,
+    numSimulacoes = 1000,
+    useAiCorrelation = false,
   ): Promise<ScenarioResponse> {
     const params: ScenarioSimulationRequest = {
-      variacao_entrada: variacaoEntradas / 100, // Converter de percentual para decimal
+      variacao_entrada: variacaoEntradas / 100,
       variacao_saida: variacaoSaidas / 100,
       dias_simulacao: diasSimulacao,
       num_simulacoes: numSimulacoes,
     };
     try {
-      const payload = { ...params, saldo_inicial_simulacao: undefined, use_ai_correlation: useAiCorrelation } as any;
-      const { data } = await http.post<ScenarioResponse>(`/simulations/scenarios`, payload, {
+      const payload = {
+        ...params,
+        saldo_inicial_simulacao: undefined,
+        use_ai_correlation: useAiCorrelation,
+      };
+      const { data } = await http.post<ScenarioResponse>('/simulations/scenarios', payload, {
         headers: { 'Content-Type': 'application/json' },
       });
       return data;
@@ -330,30 +387,40 @@ class ApiService {
     }
   }
 
-  // Obter principais eventos de negócio
+  async runScenarioSimulation(payload: unknown): Promise<unknown> {
+    try {
+      const { data } = await http.post('/simulations/scenario-simulation', payload, {
+        headers: { 'Content-Type': 'application/json' },
+      });
+      return data;
+    } catch (error) {
+      this.extractErrorMessage(error);
+    }
+  }
+
   async getKeyBusinessEvents(): Promise<KeyBusinessEventsResponse> {
     try {
-      const { data } = await http.get<KeyBusinessEventsResponse>(`/simulations/key-business-events`);
+      const { data } = await http.get<KeyBusinessEventsResponse>(
+        '/simulations/key-business-events',
+      );
       return data;
     } catch (error) {
       this.extractErrorMessage(error);
     }
   }
 
-  // Obter sugestões de empréstimos
   async getLoanSuggestions(): Promise<LoanSuggestionsResponse> {
     try {
-      const { data } = await http.get<LoanSuggestionsResponse>(`/simulations/loan-suggestions`);
+      const { data } = await http.get<LoanSuggestionsResponse>('/simulations/loan-suggestions');
       return data;
     } catch (error) {
       this.extractErrorMessage(error);
     }
   }
 
-  // Simulação de eventos de negócio
-  async simulateBusinessEvents(request: BusinessEventSimulationRequest): Promise<any> {
+  async simulateBusinessEvents(request: BusinessEventSimulationRequest): Promise<unknown> {
     try {
-      const { data } = await http.post<any>(`/simulations/scenario-simulation`, request, {
+      const { data } = await http.post('/simulations/scenario-simulation', request, {
         headers: { 'Content-Type': 'application/json' },
       });
       return data;
@@ -362,10 +429,9 @@ class ApiService {
     }
   }
 
-  // Simulação de empréstimo
-  async simulateLoanImpact(request: LoanSimulationRequest): Promise<any> {
+  async simulateLoanImpact(request: LoanSimulationRequest): Promise<unknown> {
     try {
-      const { data } = await http.post<any>(`/simulations/scenario-simulation`, request, {
+      const { data } = await http.post('/simulations/scenario-simulation', request, {
         headers: { 'Content-Type': 'application/json' },
       });
       return data;
@@ -374,23 +440,30 @@ class ApiService {
     }
   }
 
-  // Verificar saúde da API
-  async healthCheck(): Promise<{ status: string; message: string }> {
+  async healthCheck(): Promise<{ status: string }> {
     try {
-      const { data } = await http.get<{ status: string; message: string }>(`/health`, { baseURL: RAW_BASE_URL });
+      const { data } = await axios.get<{ status: string }>(`${RAW_BASE_URL}/health`);
       return data;
     } catch (error) {
       this.extractErrorMessage(error);
     }
   }
 
-  // Gerar relatório (Gemini backend)
-  async generateReport(payload: { page: string; context?: Record<string, any>; simulation_type?: string }): Promise<{ page: string; model: string; used_ai: boolean; report_markdown: string }> {
+  async generateReport(payload: {
+    page: string;
+    context?: Record<string, unknown>;
+    simulation_type?: string;
+  }): Promise<{
+    page: string;
+    model: string;
+    used_ai: boolean;
+    report_markdown: string;
+  }> {
     try {
-      const { data } = await http.post(`/reports/generate`, payload, {
+      const { data } = await http.post('/reports/generate', payload, {
         headers: { 'Content-Type': 'application/json' },
       });
-      return data as any;
+      return data;
     } catch (error) {
       this.extractErrorMessage(error);
     }
@@ -398,22 +471,18 @@ class ApiService {
 }
 
 export const apiService = new ApiService();
+export default apiService;
 
-// Funções legacy para compatibilidade (se necessário)
-export const predictCashflow = (params: { future_days: number }) => 
+export const predictCashflow = (params: { future_days: number }) =>
   apiService.predictCashflow(params);
 
-export const uploadExcelBundle = (file: File) => 
-  apiService.uploadExcelBundle(file);
+export const uploadExcelBundle = (file: File) => apiService.uploadExcelBundle(file);
 
-export const viewProcessed = (params?: { 
-  limit?: number; 
-  start_date?: string; 
-  end_date?: string; 
-  order?: 'asc' | 'desc' 
+export const viewProcessed = (params?: {
+  limit?: number;
+  start_date?: string;
+  end_date?: string;
+  order?: 'asc' | 'desc';
 }) => apiService.viewProcessed(params);
 
-export const loadExcelBundle = (limit?: number) =>
-  apiService.loadExcelBundle(limit);
-
-export { apiService as default };
+export { RAW_BASE_URL as API_BASE_URL };

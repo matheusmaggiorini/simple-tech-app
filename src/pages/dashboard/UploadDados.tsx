@@ -1,5 +1,7 @@
 import { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
+import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { Upload, FileText, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +14,8 @@ interface UploadDadosProps {
 export function UploadDados({
   onUploadSuccess
 }: UploadDadosProps) {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [inputFiles, setInputFiles] = useState<File[]>([]);
   const [outputFiles, setOutputFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -93,13 +97,13 @@ export function UploadDados({
       const hasOutflow = outputFiles.length > 0;
       await apiService.uploadExcelBundleMulti(filesToSend, hasOutflow);
       toast({
-        title: "Sucesso!",
-        description: "Arquivos enviados e processados com sucesso."
+        title: "Success",
+        description: "Files uploaded and processed successfully.",
       });
-      console.log('Disparando evento data-updated...');
-      window.dispatchEvent(new Event('data-updated'));
-      console.log('Evento data-updated disparado!');
+      await queryClient.invalidateQueries({ queryKey: ["dataStatus"] });
+      window.dispatchEvent(new Event("data-updated"));
       onUploadSuccess?.();
+      navigate("/dashboard");
     } catch (error) {
       console.error('Erro no upload:', error);
       toast({

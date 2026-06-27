@@ -247,17 +247,14 @@ export function SimulacaoCenarios() {
   const rodarSimulacao = async () => {
     try {
       setLoading(true);
-      console.log('Iniciando simulação...', { activeTab, scenario, seasonalityRules });
-      
-      let payload: any;
-      let response: Response;
+
+      let result: unknown;
 
       if (activeTab === "macroeconomic") {
-        // Nova rota opcional com correlação IA
         try {
-          const result = await apiService.scenarioSimulation(0, 0, 30, 1000, useAiCorrelation);
-          const summary = (result as any)?.results_summary;
-          if (!summary) throw new Error('Estrutura não reconhecida em /simulations/scenarios');
+          const scenarioResult = await apiService.scenarioSimulation(0, 0, 30, 1000, useAiCorrelation);
+          const summary = (scenarioResult as { results_summary?: Record<string, number> })?.results_summary;
+          if (!summary) throw new Error("Unexpected response from /simulations/scenarios");
 
           const probNegativo = (summary.prob_saldo_negativo_final ?? 0) * 100;
           const distribuicao = [
@@ -265,7 +262,7 @@ export function SimulacaoCenarios() {
             { range: "Negativo", frequency: Math.round((probNegativo / 100) * 400), value: (summary.valor_minimo_esperado || 0) * 0.5 },
             { range: "Neutro", frequency: 200, value: 0 },
             { range: "Positivo", frequency: 80, value: summary.valor_mediano_esperado || 0 },
-            { range: "Muito Positivo", frequency: 20, value: summary.valor_maximo_esperado || 0 }
+            { range: "Muito Positivo", frequency: 20, value: summary.valor_maximo_esperado || 0 },
           ];
 
           setResultados({
@@ -279,85 +276,49 @@ export function SimulacaoCenarios() {
           });
 
           toast({
-            title: "Simulação concluída!",
-            description: `Cenário ${scenario} simulado${useAiCorrelation ? ' com' : ' sem'} correlação IA.`,
+            title: "Simulation complete",
+            description: `Scenario ${scenario} simulated${useAiCorrelation ? " with" : " without"} AI correlation.`,
           });
           return;
-        } catch (err) {
-          console.warn('Falha na rota /simulations/scenarios, usando fluxo legado.', err);
-          payload = {
+        } catch {
+          result = await apiService.runScenarioSimulation({
             scenario_type: scenario,
-            seasonality_rules: seasonalityRules
-          };
-          response = await fetch('http://localhost:8000/api/simulations/scenario-simulation', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+            seasonality_rules: seasonalityRules,
           });
-          console.log("Resposta da API (status):", response.status, response.statusText);
         }
       } else if (activeTab === "business_events") {
-        // Simulação de eventos de negócio
-        const filteredInflowModifiers = Array.from(inflowModifiers.values())
-          .filter(modifier => modifier.value_change_percentage !== 0 || modifier.delay_days !== 0);
-        
-        const filteredOutflowModifiers = Array.from(outflowModifiers.values())
-          .filter(modifier => modifier.value_change_percentage !== 0 || modifier.delay_days !== 0);
+        const filteredInflowModifiers = Array.from(inflowModifiers.values()).filter(
+          (modifier) => modifier.value_change_percentage !== 0 || modifier.delay_days !== 0,
+        );
+        const filteredOutflowModifiers = Array.from(outflowModifiers.values()).filter(
+          (modifier) => modifier.value_change_percentage !== 0 || modifier.delay_days !== 0,
+        );
 
         const businessEventPayload: BusinessEventSimulationRequest = {
           simulation_type: "event",
           inflow_modifiers: filteredInflowModifiers,
-          outflow_modifiers: filteredOutflowModifiers
+          outflow_modifiers: filteredOutflowModifiers,
         };
 
-        console.log("Enviando payload para simulação de eventos:", businessEventPayload);
-        
-        response = await fetch('http://localhost:8000/api/simulations/scenario-simulation', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(businessEventPayload)
-        });
-        
-        console.log("Resposta da API (status):", response.status, response.statusText);
+        result = await apiService.simulateBusinessEvents(businessEventPayload);
       } else {
-        // Simulação de empréstimo
         const loanPayload: LoanSimulationRequest = {
           simulation_type: "loan_impact",
           loan_params: {
             amount: loanAmount,
             interest_rate_monthly: interestRate,
-            term_months: loanTerm
-          }
+            term_months: loanTerm,
+          },
         };
 
-        console.log("Enviando payload para simulação de empréstimo:", loanPayload);
-        
-        response = await fetch('http://localhost:8000/api/simulations/scenario-simulation', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(loanPayload)
-        });
-        
-        console.log("Resposta da API (status):", response.status, response.statusText);
+        result = await apiService.simulateLoanImpact(loanPayload);
       }
 
-      if (!response.ok) {
-        throw new Error(`Erro na API: ${response.status}`);
-      }
+      const parsed = result as { simulated_summary?: Record<string, number> };
 
-      const result = await response.json();
-      console.log("Resultado completo da simulação:", JSON.stringify(result, null, 2));
-      
-      // Verificar se a resposta tem a estrutura esperada
-      if (result && result.simulated_summary) {
-        const summary = result.simulated_summary;
-        console.log("Summary processado:", summary);
-        
-        // Calcular probabilidade de fluxo negativo baseado nos dados
+      if (parsed?.simulated_summary) {
+        const summary = parsed.simulated_summary;
+
         const mesesNegativos = summary.meses_com_fluxo_negativo || 0;
         const totalMeses = 12;
         const probSaldoNegativo = mesesNegativos / totalMeses;
@@ -417,8 +378,7 @@ export function SimulacaoCenarios() {
         });
         
       } else {
-        console.error("Estrutura de resposta inválida:", result);
-        throw new Error("Estrutura de resposta inválida da API - esperado 'simulated_summary'");
+        throw new Error("Invalid API response — expected 'simulated_summary'");
       }
       
     } catch (error) {

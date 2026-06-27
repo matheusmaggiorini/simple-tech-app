@@ -1,7 +1,16 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Brain, Eye, Zap } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Hero = () => {
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+
+  const handleGetStarted = () => {
+    navigate(isAuthenticated ? "/dashboard" : "/auth");
+  };
+
   return (
     <section id="hero" className="relative min-h-screen flex items-center justify-center bg-gradient-subtle overflow-hidden">
       {/* Background decoration */}
@@ -36,7 +45,7 @@ const Hero = () => {
             <Button 
               size="lg" 
               className="bg-gradient-simple hover:opacity-90 text-primary-foreground font-medium shadow-simple group"
-              onClick={() => window.location.href = '/dashboard'}
+              onClick={handleGetStarted}
             >
               Começar Agora
               <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
@@ -46,6 +55,7 @@ const Hero = () => {
               size="lg" 
               variant="outline" 
               className="border-2 border-border hover:bg-accent/10"
+              onClick={() => navigate("/auth")}
             >
               Ver Demonstração
             </Button>

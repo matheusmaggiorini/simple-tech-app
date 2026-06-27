@@ -1,8 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Header = () => {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   
   const scrollToSection = (sectionId: string) => {
     const element = document.getElementById(sectionId);
@@ -21,7 +23,7 @@ const Header = () => {
           <div className="flex items-center pl-2">
             <img 
               src="/lovable-uploads/34a7ef60-8f49-4925-bfbb-87137457f2fe.png" 
-              alt="Simple.Tech Logo" 
+              alt="Simple Tech Logo" 
               className="h-8 w-auto cursor-pointer"
               onClick={() => scrollToSection('hero')}
             />
@@ -54,7 +56,6 @@ const Header = () => {
             </button>
           </nav>
 
-          {/* Mobile Menu Button */}
           <div className="md:hidden">
             <Button 
               variant="ghost" 
@@ -69,9 +70,9 @@ const Header = () => {
           <Button 
             variant="default" 
             className="bg-gradient-simple hover:opacity-90 text-primary-foreground font-medium hidden sm:block"
-            onClick={() => navigate("/auth")}
+            onClick={() => navigate(isAuthenticated ? "/dashboard" : "/auth")}
           >
-            Login
+            {isAuthenticated ? "Dashboard" : "Login"}
           </Button>
         </div>
       </div>

@@ -54,6 +54,7 @@ export function VisaoGeral() {
   const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [reportMarkdown, setReportMarkdown] = useState<string | null>(null);
+  const [reportUsedAi, setReportUsedAi] = useState(false);
   const [reportLoading, setReportLoading] = useState<boolean>(false);
   const { toast } = useToast();
 
@@ -286,8 +287,8 @@ export function VisaoGeral() {
       total_saidas: item.total_saidas,
       fluxo_liquido: item.fluxo_liquido,
       saldo_final_mes: item.saldo_final_mes,
-      qtd_transacoes: 0, // Não disponível na API
-      ticket_medio: item.total_entradas > 0 ? item.total_entradas : 0 // Aproximação
+      qtd_transacoes: item.qtd_transacoes ?? 0,
+      ticket_medio: item.ticket_medio ?? 0,
     }));
     
     // Extrair anos disponíveis
@@ -417,6 +418,7 @@ export function VisaoGeral() {
       };
       const res = await apiService.generateReport({ page: "VisaoGeral", context });
       setReportMarkdown(res.report_markdown);
+      setReportUsedAi(res.used_ai);
       toast({ title: "Relatório gerado" });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Erro desconhecido";
@@ -742,7 +744,10 @@ export function VisaoGeral() {
 
       {/* Relatório */}
       {reportMarkdown && (
-        <ReportRenderer markdown={reportMarkdown} />
+        <ReportRenderer
+          markdown={reportMarkdown}
+          description={reportUsedAi ? "Análise gerada com IA" : "Análise automática com base nos seus dados"}
+        />
       )}
     </div>
   );

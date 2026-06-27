@@ -347,6 +347,8 @@ class ApiService {
       total_saidas: number;
       fluxo_liquido: number;
       saldo_final_mes: number;
+      qtd_transacoes: number;
+      ticket_medio: number;
     }>
   > {
     try {

@@ -6,13 +6,16 @@ interface ReportRendererProps {
   markdown: string;
   title?: string;
   description?: string;
+  usedAi?: boolean;
 }
 
 export function ReportRenderer({ 
   markdown, 
   title = "Relatório Executivo",
-  description = "Análise detalhada gerada por IA"
+  description,
+  usedAi,
 }: ReportRendererProps) {
+  const subtitle = description ?? (usedAi ? "Análise detalhada gerada com IA" : "Análise automática com base nos seus dados");
   return (
     <Card className="shadow-card border-primary/20">
       <CardHeader className="border-b border-border bg-gradient-to-r from-primary/5 to-transparent">
@@ -22,7 +25,7 @@ export function ReportRenderer({
           </div>
           <div>
             <CardTitle className="text-foreground">{title}</CardTitle>
-            <CardDescription>{description}</CardDescription>
+            <CardDescription>{subtitle}</CardDescription>
           </div>
         </div>
       </CardHeader>
